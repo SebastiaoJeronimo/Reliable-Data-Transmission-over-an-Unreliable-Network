@@ -1,4 +1,4 @@
-import os
+import math
 import random
 import sys
 from socket import *
@@ -14,9 +14,10 @@ STATE_RECV = 3
 STATE_TIMEOUT = 4
 STATE_END = 5
 
-TIMEOUT = 0.1  # seconds
+TIMEOUT = 1 # seconds
 chunkSize = 1024
 dgramSize = chunkSize + sys.getsizeof(int) * 2  # 2 ints for the header
+recvBuffer = sys.getsizeof(int) * 2  # 2 ints
 
 ss = socket(AF_INET, SOCK_DGRAM)
 receiverAddr = ()
@@ -108,7 +109,74 @@ def main():
     state = STATE_SEND
     file = open("./senderFiles/" + fileName, 'rb')
 
+
     while True:
+        if state == STATE_SEND:  # Send windowSize number of frames
+            pktNum = latestConfirmed
+            for i in range(windowSize):
+                pktNum += 1
+                file.seek(pktNum * chunkSize)
+                data = file.read(chunkSize)
+
+                if not data:  # end of file
+                    if latestConfirmed == pktNum - 1:  # only go for state end if the window is empty
+                        state = STATE_END
+                        break
+
+
+                rdt_send(data, pktNum)
+
+                state = STATE_WAIT
+
+        elif state == STATE_WAIT:
+            if waitForReply(ss, TIMEOUT):
+                state = STATE_RECV
+            else:
+                state = STATE_SEND
+
+        elif state == STATE_RECV:
+            reply, rcvAddr = ss.recvfrom(recvBuffer)
+
+            if rcvAddr != receiverAddr:
+                print("Error: Received an packet from a source that is not the receiver.")
+                state = STATE_WAIT
+                continue
+
+            reply = pickle.loads(reply)
+            if int(reply[0]) == M_ACK:  # ack
+                latestConfirmed = int(reply[1])
+            else:
+                print("Error: received a data packet instead of an ack.")
+
+            state = STATE_SEND
+
+        elif state == STATE_END:  # special treatment for the last packet
+            rdt_send(b'', -1)
+            if waitForReply(ss, TIMEOUT * 2.5):  # more timeout
+                reply, rcvAddr = ss.recvfrom(recvBuffer)
+
+                if rcvAddr != receiverAddr:
+                    print("Error: Received an packet from a source that is not the receiver.")
+                    continue
+
+                reply = pickle.loads(reply)
+                if int(reply[0]) == M_ACK and int(reply[1]) == -1:  # different ack
+                    print("File transfer complete.")
+                    break
+
+
+
+
+    file.close()
+    ss.close()
+
+
+if __name__ == "__main__":
+    main()
+
+
+"""
+        while True:
         data = b''
         if state == STATE_SEND:
             file.seek(pktNum * chunkSize)
@@ -155,10 +223,10 @@ def main():
 
         elif state == STATE_TIMEOUT:
             window.append(pktNum)
-            """
-            check window size if it is full resend the needed packets
-            else send the next packet
-            """
+
+            # check window size if it is full resend the needed packets
+            # else send the next packet
+
             if len(window) == windowSize:
                 pktNum = window.pop(0)
 
@@ -167,11 +235,5 @@ def main():
         elif state == STATE_END:
             ss.sendto(pickle.dumps((M_DATA, -1, b'')), receiverAddr)
             print("File transfer complete.")
-            break
-
-    file.close()
-    ss.close()
-
-
-if __name__ == "__main__":
-    main()
+            state = STATE_WAIT
+"""

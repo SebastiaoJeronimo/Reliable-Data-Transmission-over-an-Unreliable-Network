@@ -40,6 +40,10 @@ def waitForReply(uSocket, timeOutInSeconds):
         return True
 
 
+def sortFunc(x):
+    return x[0]
+
+
 def main():
     # Check number of arguments
     global senderAddr
@@ -67,21 +71,24 @@ def main():
     # file open
     file = open("./receiverFiles/" + fileName, 'wb')
 
-    offset = 0
-    writtenPKT = 0
+    writtenPKT = 0  # number of packets written to the file
     confirm = -1
     state = STATE_WAIT
+    ended = False
+
+    waitList = []  # list of packets that arrived out of order
 
     while True:
+
         if state == STATE_WAIT:
             if waitForReply(rs, TIMEOUT):
                 state = STATE_RECV
 
+
         elif state == STATE_RECV:
-            print("Receiving packet...")
             reply, sAddr = rs.recvfrom(dgramSize)
 
-
+            #TODO: uncomment this
             #if senderAddr == ():
             #    senderAddr = sAddr
 
@@ -91,7 +98,6 @@ def main():
 
             reply = pickle.loads(reply)  # (status, pktNum, data)
             pktNum = int(reply[1])
-            print("Packet received: ", pktNum, ".")
 
             if reply[0] != 0:
                 print("Error: Received a non data packet.")
@@ -101,31 +107,24 @@ def main():
                 state = STATE_END
                 continue
 
-            if pktNum == writtenPKT:
-                print("Writing packet number ", pktNum, ".")
+            if pktNum == confirm + 1:
                 file.write(reply[2])
-                print("Packet written.")
-                offset += len(reply[2])
-                writtenPKT += 1
-                """ 
+                confirm += 1
+
                 # Verify if there are packets in the buffer that can be written
-                """
-                state = STATE_SEND
-                confirm = writtenPKT
+                if len(waitList) != 0:
+                    for i in range(0, len(waitList)):
+                        if waitList[i][0] == confirm + 1:
+                            file.write(waitList[i][1])
+                            confirm += 1
+                            waitList.pop(i)
 
-            else:
-                if pktNum < writtenPKT:
-                    # resend ack
-                    state = STATE_SEND
-                    confirm = writtenPKT
+            elif pktNum > confirm + 1:
+                # save in buffer to write later
+                waitList.append((pktNum, reply[2]))
+                waitList.sort(reverse=False, key=sortFunc)
 
-                """
-                else:
-                    #add to buffer and wait for the rest of the packets
-                    buffer.append((pktNum, reply[2]))
-                    state = STATE_SEND
-                    confirm = pktNum
-                """
+            state = STATE_SEND
 
         elif state == STATE_SEND:
             # send ack
@@ -133,12 +132,17 @@ def main():
             sendDatagram(ack, rs, senderAddr)
             state = STATE_WAIT
 
-        elif state == STATE_END: #TODO fix this
+        elif state == STATE_END:  # Special treatment for the last packet
             # send ack
             ack = pickle.dumps((1, confirm))
             sendDatagram(ack, rs, senderAddr)
-            print("File transfer complete.")
-            break
+
+            if not waitForReply(rs, TIMEOUT * 5):  # more timeout
+                print("File transfer complete.")
+                break
+
+
+
 
     file.close()
     rs.close()
