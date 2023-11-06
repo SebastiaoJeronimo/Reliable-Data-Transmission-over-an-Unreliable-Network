@@ -14,6 +14,7 @@ STATE_RECV = 3
 STATE_TIMEOUT = 4
 STATE_END = 5
 
+TIMEOUT = 0.1  # seconds
 chunkSize = 1024
 dgramSize = chunkSize + sys.getsizeof(int) * 2  # 2 ints for the header
 
@@ -62,11 +63,11 @@ def main():
         print("Wrong number of arguments.")
         sys.exit(6969)
 
+    # TODO: uncomment this
+    """
     senderIP = sys.argv[1]
     senderPort = int(sys.argv[2])
 
-    #TODO: uncomment this
-    """ 
     receiverIP = sys.argv[3]
     receiverPort = int(sys.argv[4])
     receiverAddr = (receiverIP, receiverPort)
@@ -75,11 +76,12 @@ def main():
     fileName = sys.argv[5]
     windowSize = int(sys.argv[6])
 
+    """
     if senderPort < 1024 or senderPort > 65535:
         print("Incorrect Sender Port number.")
         sys.exit(69420)
 
-    """
+    
     if receiverPort < 1024 or receiverPort > 65535:
         print("Incorrect Receiver Port number.")
         sys.exit(69421)
@@ -88,6 +90,8 @@ def main():
     if windowSize < 1 or windowSize > 10:
         print("Invalid window size.")
         sys.exit(69422)
+
+    window = []
 
     print("Sender is running.")
 
@@ -99,24 +103,37 @@ def main():
 
 
     pktNum = 0
+    latestConfirmed = -1
 
     state = STATE_SEND
     file = open("./senderFiles/" + fileName, 'rb')
 
     while True:
+        data = b''
         if state == STATE_SEND:
             file.seek(pktNum * chunkSize)
             data = file.read(chunkSize)
 
             if not data:
+                # check if the window is not empty
+                if len(window) != 0:
+                    # send a packet with -1 to indicate the end of the file
+                    pktNum = window.pop(0)
+                    state = STATE_SEND
+
+                # if it is
                 state = STATE_END
                 continue
 
             rdt_send(data, pktNum)
+            pktNum += 1
+            if pktNum < latestConfirmed:
+                pktNum = latestConfirmed
+
             state = STATE_WAIT
 
         elif state == STATE_WAIT:
-            if waitForReply(ss, 1):
+            if waitForReply(ss, TIMEOUT):
                 state = STATE_RECV
             else:
                 state = STATE_TIMEOUT
@@ -125,12 +142,26 @@ def main():
             reply, trash = ss.recvfrom(dgramSize)
             reply = pickle.loads(reply)
             if int(reply[0]) == M_ACK:  # ack
-                pktNum = int(reply[1])
+                # check if there is a pkt in window that has been acked
+                latestConfirmed = int(reply[1])
+                for key in window:
+                    if key < latestConfirmed:
+                        window.pop(key)
+
+                pktNum = latestConfirmed
             else:
                 print("Error: received a data packet instead of an ack.")
             state = STATE_SEND
 
         elif state == STATE_TIMEOUT:
+            window.append(pktNum)
+            """
+            check window size if it is full resend the needed packets
+            else send the next packet
+            """
+            if len(window) == windowSize:
+                pktNum = window.pop(0)
+
             state = STATE_SEND
 
         elif state == STATE_END:

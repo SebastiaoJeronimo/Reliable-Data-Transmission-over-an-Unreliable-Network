@@ -10,6 +10,7 @@ STATE_WAIT = 2
 STATE_RECV = 3
 STATE_END = 4
 
+TIMEOUT = 1  # seconds
 chunkSize = 1024
 dgramSize = chunkSize + sys.getsizeof(int) * 2  # 2 ints for the header
 
@@ -73,7 +74,7 @@ def main():
 
     while True:
         if state == STATE_WAIT:
-            if waitForReply(rs, 1):
+            if waitForReply(rs, TIMEOUT):
                 state = STATE_RECV
 
         elif state == STATE_RECV:
