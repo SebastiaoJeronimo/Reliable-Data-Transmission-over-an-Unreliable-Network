@@ -112,6 +112,7 @@ def main():
 
     while True:
         if state == STATE_SEND:  # Send windowSize number of frames
+            print("Latest confirmed = ", latestConfirmed)
             pktNum = latestConfirmed
             for i in range(windowSize):
                 pktNum += 1
@@ -127,6 +128,7 @@ def main():
                 rdt_send(data, pktNum)
 
                 state = STATE_WAIT
+            print("Sent window from " + str(latestConfirmed + 1) + " to " + str(pktNum))
 
         elif state == STATE_WAIT:
             if waitForReply(ss, TIMEOUT):
@@ -148,10 +150,12 @@ def main():
             else:
                 print("Error: received a data packet instead of an ack.")
 
-            state = STATE_SEND
+            state = STATE_WAIT
 
         elif state == STATE_END:  # special treatment for the last packet
+            print("Sending end packet.")
             rdt_send(b'', -1)
+
             if waitForReply(ss, TIMEOUT * 2.5):  # more timeout
                 reply, rcvAddr = ss.recvfrom(recvBuffer)
 

@@ -81,8 +81,15 @@ def main():
     while True:
 
         if state == STATE_WAIT:
-            if waitForReply(rs, TIMEOUT):
-                state = STATE_RECV
+            if not ended:
+                if waitForReply(rs, TIMEOUT):
+                    state = STATE_RECV
+            else:
+                if waitForReply(rs, TIMEOUT * 5):
+                    state = STATE_RECV
+                else:
+                    print("File transfer complete.")
+                    break
 
 
         elif state == STATE_RECV:
@@ -113,7 +120,7 @@ def main():
 
                 # Verify if there are packets in the buffer that can be written
                 if len(waitList) != 0:
-                    for i in range(0, len(waitList)):
+                    for i in range(0, len(waitList) - 1):
                         if waitList[i][0] == confirm + 1:
                             file.write(waitList[i][1])
                             confirm += 1
@@ -134,12 +141,13 @@ def main():
 
         elif state == STATE_END:  # Special treatment for the last packet
             # send ack
-            ack = pickle.dumps((1, confirm))
+            print("Sending end ack packet.")
+            ack = pickle.dumps((1, -1))
             sendDatagram(ack, rs, senderAddr)
+            ended = True
+            state = STATE_WAIT
 
-            if not waitForReply(rs, TIMEOUT * 5):  # more timeout
-                print("File transfer complete.")
-                break
+
 
 
 
