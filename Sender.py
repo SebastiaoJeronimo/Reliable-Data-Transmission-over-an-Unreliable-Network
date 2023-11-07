@@ -22,18 +22,14 @@ recvBuffer = sys.getsizeof(int) * 2  # 2 ints
 ss = socket(AF_INET, SOCK_DGRAM)
 receiverAddr = ()
 
-#TODO: Remove this
-senderAddr = ("127.0.0.1", 10000)
-receiverAddr = ("127.0.0.1", 10001)
-
 
 def sendDatagram(msg, sock, address):
     # msg is a byte array ready to be sent
     # Generate random number in the range of 1 to 10
     rand = random.randint(1, 10)
 
-    # 20% of loss probability TODO change this number
-    if rand > 0:
+    # 20% of loss probability
+    if rand > 2:
         sock.sendto(msg, address)
 
 
@@ -64,20 +60,20 @@ def main():
         print("Wrong number of arguments.")
         sys.exit(6969)
 
-    # TODO: uncomment this
-    """
+
     senderIP = sys.argv[1]
     senderPort = int(sys.argv[2])
+    senderAddr = (senderIP, senderPort)
 
     receiverIP = sys.argv[3]
     receiverPort = int(sys.argv[4])
     receiverAddr = (receiverIP, receiverPort)
-    """
+
 
     fileName = sys.argv[5]
     windowSize = int(sys.argv[6])
 
-    """
+
     if senderPort < 1024 or senderPort > 65535:
         print("Incorrect Sender Port number.")
         sys.exit(69420)
@@ -86,29 +82,22 @@ def main():
     if receiverPort < 1024 or receiverPort > 65535:
         print("Incorrect Receiver Port number.")
         sys.exit(69421)
-    """
+
 
     if windowSize < 1 or windowSize > 10:
         print("Invalid window size.")
         sys.exit(69422)
 
-    window = []
 
     print("Sender is running.")
 
-    #TODO: uncomment this
-    #ss.bind((senderIP, senderPort))
-
-    #TODO: Remove this
     ss.bind(senderAddr)
 
 
-    pktNum = 0
     latestConfirmed = -1
 
     state = STATE_SEND
     file = open("./senderFiles/" + fileName, 'rb')
-
 
     while True:
         if state == STATE_SEND:  # Send windowSize number of frames

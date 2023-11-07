@@ -17,17 +17,14 @@ dgramSize = chunkSize + sys.getsizeof(int) * 2  # 2 ints for the header
 rs = socket(AF_INET, SOCK_DGRAM)
 senderAddr = ()
 
-#TODO: Remove this
-senderAddr = ("127.0.0.1", 10000)
-receiverAddr = ("127.0.0.1", 10001)
 
 def sendDatagram(msg, sock, address):
     # msg is a byte array ready to be sent
     # Generate random number in the range of 1 to 10
     rand = random.randint(1, 10)
 
-    # 20% of loss probability TODO change this number
-    if rand > 0:
+    # 20% of loss probability
+    if rand > 2:
         sock.sendto(msg, address)
 
 
@@ -60,11 +57,8 @@ def main():
         print("Invalid port number.")
         sys.exit(69420)
 
-    # TODO: uncomment this
-    #rs.bind((sys.argv[1], port))
+    rs.bind((sys.argv[1], port))
 
-    #TODO: Remove this
-    rs.bind(receiverAddr)
 
     print("Receiver is running.")
 
@@ -95,9 +89,8 @@ def main():
         elif state == STATE_RECV:
             reply, sAddr = rs.recvfrom(dgramSize)
 
-            #TODO: uncomment this
-            #if senderAddr == ():
-            #    senderAddr = sAddr
+            if senderAddr == ():
+                senderAddr = sAddr
 
             if senderAddr != sAddr:
                 print("Error: Received a packet from a different sender.")
@@ -120,11 +113,13 @@ def main():
 
                 # Verify if there are packets in the buffer that can be written
                 if len(waitList) != 0:
+                    counter = 0
                     for i in range(0, len(waitList) - 1):
-                        if waitList[i][0] == confirm + 1:
-                            file.write(waitList[i][1])
+                        if waitList[i-counter][0] == confirm + 1:
+                            file.write(waitList[i-counter][1])
                             confirm += 1
-                            waitList.pop(i)
+                            waitList.pop(i-counter)
+                            counter += 1
 
             elif pktNum > confirm + 1:
                 # save in buffer to write later
