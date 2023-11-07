@@ -28,6 +28,11 @@ Dentro do container Sender:   **** O receiverIP e senderIP podes ver no docker d
 	python3 sender.py senderIP 1024 receiverIP 1024 m.jpeg 10 
 	
 
+Docker Image:
+	FROM ubuntu 
+	RUN apt-get update && \
+		apt-get install -y iputils-ping iproute2 python3
+
 
 O que as Flags querem dizer:
 
