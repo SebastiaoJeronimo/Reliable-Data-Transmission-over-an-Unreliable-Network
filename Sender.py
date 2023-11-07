@@ -101,7 +101,6 @@ def main():
 
     while True:
         if state == STATE_SEND:  # Send windowSize number of frames
-            print("Latest confirmed = ", latestConfirmed)
             pktNum = latestConfirmed
             for i in range(windowSize):
                 pktNum += 1
@@ -117,7 +116,6 @@ def main():
                 rdt_send(data, pktNum)
 
                 state = STATE_WAIT
-            print("Sent window from " + str(latestConfirmed + 1) + " to " + str(pktNum))
 
         elif state == STATE_WAIT:
             if waitForReply(ss, TIMEOUT):
@@ -142,7 +140,6 @@ def main():
             state = STATE_WAIT
 
         elif state == STATE_END:  # special treatment for the last packet
-            print("Sending end packet.")
             rdt_send(b'', -1)
 
             if waitForReply(ss, TIMEOUT * 2.5):  # more timeout
@@ -166,67 +163,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-"""
-        while True:
-        data = b''
-        if state == STATE_SEND:
-            file.seek(pktNum * chunkSize)
-            data = file.read(chunkSize)
-
-            if not data:
-                # check if the window is not empty
-                if len(window) != 0:
-                    # send a packet with -1 to indicate the end of the file
-                    pktNum = window.pop(0)
-                    state = STATE_SEND
-
-                # if it is
-                state = STATE_END
-                continue
-
-            rdt_send(data, pktNum)
-            pktNum += 1
-            if pktNum < latestConfirmed:
-                pktNum = latestConfirmed
-
-            state = STATE_WAIT
-
-        elif state == STATE_WAIT:
-            if waitForReply(ss, TIMEOUT):
-                state = STATE_RECV
-            else:
-                state = STATE_TIMEOUT
-
-        elif state == STATE_RECV:
-            reply, trash = ss.recvfrom(dgramSize)
-            reply = pickle.loads(reply)
-            if int(reply[0]) == M_ACK:  # ack
-                # check if there is a pkt in window that has been acked
-                latestConfirmed = int(reply[1])
-                for key in window:
-                    if key < latestConfirmed:
-                        window.pop(key)
-
-                pktNum = latestConfirmed
-            else:
-                print("Error: received a data packet instead of an ack.")
-            state = STATE_SEND
-
-        elif state == STATE_TIMEOUT:
-            window.append(pktNum)
-
-            # check window size if it is full resend the needed packets
-            # else send the next packet
-
-            if len(window) == windowSize:
-                pktNum = window.pop(0)
-
-            state = STATE_SEND
-
-        elif state == STATE_END:
-            ss.sendto(pickle.dumps((M_DATA, -1, b'')), receiverAddr)
-            print("File transfer complete.")
-            state = STATE_WAIT
-"""

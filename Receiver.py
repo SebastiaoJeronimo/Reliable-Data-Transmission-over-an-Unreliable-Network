@@ -136,7 +136,6 @@ def main():
 
         elif state == STATE_END:  # Special treatment for the last packet
             # send ack
-            print("Sending end ack packet.")
             ack = pickle.dumps((1, -1))
             sendDatagram(ack, rs, senderAddr)
             ended = True

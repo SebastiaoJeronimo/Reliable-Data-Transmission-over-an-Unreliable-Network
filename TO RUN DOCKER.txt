@@ -1,0 +1,45 @@
+Ordem para correr as cenas:
+	1 - Crias a docker image da aula prática 5 segue o guião da aula (parte 2.4 e 2.5);
+	2 - Corres os container com os comandos abaixo
+	3 - Corres o código do receiver primeiro
+	4 - Corres o código do sender depois
+	5 - Esperar que acabe
+	6 - Corres "diff ./senderFiles/m.jpeg ./receiverFiles/m.jpeg" no container receiver
+	7 - Se o diff nao tiver output então funcionou
+	8 - FIM
+		
+
+Para correr os containers
+	**** lab05 é a dockerimage criada na aula prática 5, segue o guião da aula (parte 2.4 e 2.5):
+
+	docker run -ti -v "PATH:/tmp" --name sender lab05 
+		
+	docker run -ti -v "PATH:/tmp" --name receiver lab05
+
+Dentro do container Receiver: **** O receiverIP e senderIP podes ver no docker desktop depois de já teres os container a correr
+
+	cd tmp
+	python3 receiver.py receiverIP 1024 m.jpeg
+	diff ./senderFiles/m.jpeg ./receiverFiles/m.jpeg
+
+Dentro do container Sender:   **** O receiverIP e senderIP podes ver no docker desktop depois de já teres os container a correr
+
+	cd tmp 
+	python3 sender.py senderIP 1024 receiverIP 1024 m.jpeg 10 
+	
+
+
+O que as Flags querem dizer:
+
+--name / Dar um nome concreto ao container
+
+-v     / Para copiar a diretoria PATH para o container
+	Não esquecer de mudar PATH para a directoria correta no teu pc
+	A parte :/tmp quer dizer que o que foi copiado vai estar na pasta tmp
+
+-t     / This flag allocates a pseudo-TTY (teletypewriter) for the container. It's often used to make the container's command line interface more interactive, allowing you to interact with the container's shell or command prompt.
+
+-i     / This flag keeps STDIN open even if not attached, allowing you to interact with the container by providing input.
+
+
+-ti é a junção de -t e -i
