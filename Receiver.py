@@ -59,7 +59,7 @@ def main():
 
     rs.bind((sys.argv[1], port))
 
-
+    #print("Muchas Gracias Aficion, Esto para Vosotros. SIIIIIII")
     print("Receiver is running.")
 
     # file open
